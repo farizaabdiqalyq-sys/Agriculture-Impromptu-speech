@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IELTS Vocabulary Roulette — Интерактивный тренажёр</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Плавная анимация появления карточки */
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-pop-in {
+            animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        /* Указатель колеса */
+        .wheel-pointer {
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+        }
+        /* Кастомный скроллбар для журнала */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Верхняя панель навигации и фильтров -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xl shadow-md">
+                        I
+                    </div>
+                    <div>
+                        <h1 class="text-lg sm:text-xl font-bold text-slate-900 leading-tight">IELTS Vocabulary Carousel</h1>
+                        <p class="text-xs text-slate-500">Интерактивная практика Speaking & Writing</p>
+                    </div>
+                </div>
+
+                <!-- Фильтр по текстам -->
+                <div class="flex flex-wrap items-center gap-2" id="topic-filters">
+                    <button data-topic="all" class="filter-btn active px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-indigo-600 text-white shadow-sm">
+                        Все темы (30)
+                    </button>
+                    <button data-topic="skyscrapers" class="filter-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-100 text-slate-700 hover:bg-slate-200">
+                        Crop-growing skyscrapers
+                    </button>
+                    <button data-topic="greenroofs" class="filter-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-100 text-slate-700 hover:bg-slate-200">
+                        Green roofs
+                    </button>
+                    <button data-topic="agriculture" class="filter-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-100 text-slate-700 hover:bg-slate-200">
+                        Risks of agriculture
+                    </button>
+                    <button data-topic="urban" class="filter-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-100 text-slate-700 hover:bg-slate-200">
+                        Urban farming
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Уведомление (Toast) вместо alert() -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-medium">
+            <span id="toast-icon" class="text-emerald-400 text-lg">✓</span>
+            <span id="toast-message">Сообщение</span>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        
+        <!-- Сетка: Слева карусель, справа рабочая карточка задания -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Левая колонка: Интерактивное колесо -->
+            <div class="lg:col-span-5 bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex flex-col items-center">
+                <div class="w-full flex items-center justify-between mb-4">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Колесо фортуны</span>
+                    <div class="flex items-center gap-2">
+                        <label class="inline-flex items-center cursor-pointer text-xs text-slate-600 font-medium select-none">
+                            <input type="checkbox" id="hide-mastered-toggle" class="sr-only peer">
+                            <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all relative peer-checked:bg-indigo-600 mr-2"></div>
+                            Скрывать изученные
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Контейнер для Canvas колеса -->
+                <div class="relative w-full max-w-[360px] aspect-square my-2 flex items-center justify-center" id="wheel-container">
+                    <!-- Указатель сверху -->
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 z-20 wheel-pointer">
+                        <svg width="32" height="36" viewBox="0 0 32 36" fill="none">
+                            <path d="M16 36L2.14359 9L29.8564 9L16 36Z" fill="#ef4444"/>
+                            <circle cx="16" cy="9" r="6" fill="#ffffff"/>
+                        </svg>
+                    </div>
+
+                    <canvas id="wheel-canvas" class="w-full h-full rounded-full shadow-lg"></canvas>
+
+                    <!-- Центральная кнопка запуска -->
+                    <button id="spin-btn" class="absolute z-10 w-20 h-20 rounded-full bg-white border-4 border-indigo-600 text-indigo-700 font-extrabold text-xs uppercase tracking-wider shadow-xl hover:scale-105 active:scale-95 transition-transform flex flex-col items-center justify-center cursor-pointer">
+                        <span>Крутить</span>
+                        <span class="text-[10px] font-normal text-slate-400 mt-0.5">SPIN</span>
+                    </button>
+                </div>
+
+                <!-- Статистика и кнопка запуска -->
+                <div class="w-full mt-5 pt-4 border-t border-slate-100 flex flex-col gap-3">
+                    <button id="main-spin-btn" class="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-base shadow-md shadow-indigo-200 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span>Крутить карусель</span>
+                    </button>
+                    <div class="flex justify-between items-center text-xs text-slate-500 px-1">
+                        <span>Доступно слов: <strong id="available-count" class="text-slate-800">30</strong></span>
+                        <span>Изучено: <strong id="mastered-count" class="text-emerald-600">0</strong> / 30</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая колонка: Карточка задания -->
+            <div class="lg:col-span-7">
+                <!-- Заглушка до первого вращения -->
+                <div id="empty-state-card" class="bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-slate-200/80 text-center flex flex-col items-center justify-center min-h-[460px]">
+                    <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-900 mb-2">Готовы к тренировке IELTS?</h2>
+                    <p class="text-slate-500 max-w-md text-sm leading-relaxed mb-6">
+                        Нажмите кнопку <strong>«Крутить карусель»</strong> слева. Вам выпадет академическое слово или словосочетание из текстов IELTS Reading, вопрос для обсуждения и начало предложения, которое нужно закончить.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-lg text-left">
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span class="text-xs font-bold text-indigo-600 block mb-1">1. Крутите колесо</span>
+                            <span class="text-xs text-slate-500">Выберите нужный текст или все темы сразу.</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span class="text-xs font-bold text-indigo-600 block mb-1">2. Отвечайте</span>
+                            <span class="text-xs text-slate-500">Используйте целевую лексику в своих ответах.</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span class="text-xs font-bold text-indigo-600 block mb-1">3. Отправляйте</span>
+                            <span class="text-xs text-slate-500">Сохраняйте и копируйте журнал для учителя.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Активная карточка с выпавшим словом -->
+                <div id="task-card" class="hidden bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 animate-pop-in">
+                    <!-- Шапка карточки: Тема и статус -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-100">
+                        <span id="card-topic-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
+                            Topic Name
+                        </span>
+                        <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 hover:text-emerald-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/70">
+                            <input type="checkbox" id="card-mastered-checkbox" class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+                            <span>Отметить как изученное</span>
+                        </label>
+                    </div>
+
+                    <!-- Целевое слово и перевод -->
+                    <div class="my-5 bg-gradient-to-br from-indigo-50 via-blue-50/50 to-slate-50 rounded-2xl p-5 border border-indigo-100/80">
+                        <div class="text-xs font-bold uppercase tracking-wider text-indigo-400 mb-1">Целевое слово / словосочетание</div>
+                        <h2 id="card-word" class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+                            cutting-edge technologies
+                        </h2>
+                        <p id="card-translation" class="text-sm sm:text-base text-slate-600 font-medium">
+                            передовые (ультрасовременные) технологии
+                        </p>
+                    </div>
+
+                    <!-- Форма для ответов ученика -->
+                    <form id="answer-form" class="space-y-5">
+                        <!-- Задание 1: Вопрос -->
+                        <div class="bg-slate-50/70 rounded-2xl p-4 sm:p-5 border border-slate-200/60">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 font-bold text-xs flex items-center justify-center">Q</span>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Ответьте на вопрос (Speaking Practice)</span>
+                            </div>
+                            <p id="card-question" class="text-sm sm:text-base font-semibold text-slate-800 mb-3 leading-relaxed">
+                                Why do proponents of vertical farming believe it is necessary to scale up indoor agriculture?
+                            </p>
+                            <textarea id="input-question-answer" rows="2" placeholder="Напишите ваш развернутый ответ на английском, используя выделенное слово..." class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"></textarea>
+                        </div>
+
+                        <!-- Задание 2: Закончите предложение -->
+                        <div class="bg-slate-50/70 rounded-2xl p-4 sm:p-5 border border-slate-200/60">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center">S</span>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Закончите предложение (Writing Practice)</span>
+                            </div>
+                            <div class="p-3 bg-white rounded-xl border border-slate-200 mb-3 text-sm sm:text-base font-medium text-slate-800" id="card-starter">
+                                By employing <strong>cutting-edge technologies</strong>, modern farmers can...
+                            </div>
+                            <textarea id="input-sentence-completion" rows="2" placeholder="Продолжите предложение логически и грамматически правильно..." class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"></textarea>
+                        </div>
+
+                        <!-- Кнопки действий -->
+                        <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+                            <button type="button" id="skip-btn" class="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+                                Крутить дальше →
+                            </button>
+                            <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-200 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                <span>Сохранить ответ в журнал</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Нижняя секция: Журнал ответов ученика -->
+        <section class="mt-10 bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <span>Журнал ответов ученика</span>
+                        <span id="log-count-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">0</span>
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Все сохранённые ответы собираются здесь. Скопируйте их, чтобы отправить преподавателю.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="clear-log-btn" class="hidden px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer">
+                        Очистить журнал
+                    </button>
+                    <button id="copy-all-btn" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all flex items-center gap-2 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                        <span>Копировать все ответы</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Список сохраненных ответов -->
+            <div id="responses-list" class="mt-6 space-y-4">
+                <div id="empty-log-message" class="text-center py-10 text-slate-400 text-sm">
+                    Пока нет сохранённых ответов. Покрутите карусель и выполните первое задание!
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // База данных всех 30 слов и словосочетаний из 4 текстов IELTS Reading
+        const VOCABULARY_DATA = [
+            // Текст 1: Crop-growing skyscrapers
+            {
+                id: 1,
+                topicKey: 'skyscrapers',
+                topicName: 'Crop-growing skyscrapers',
+                word: 'to be laid waste',
+                translation: 'быть опустошенным, разрушенным, приведенным в негодность',
+                question: 'What happens to the environment and local communities when agricultural land is laid waste by poor farming practices?',
+                starterHtml: 'Over the past century, millions of hectares of fertile land have been <strong>laid waste</strong> because...',
+                starterPlain: 'Over the past century, millions of hectares of fertile land have been laid waste because...'
+            },
+            {
+                id: 2,
+                topicKey: 'skyscrapers',
+                topicName: 'Crop-growing skyscrapers',
+                word: 'to scale up',
+                translation: 'масштабировать, увеличивать объемы (производства/технологии)',
+                question: 'Why do experts believe it is urgent to scale up indoor farming technologies before the year 2050?',
+                starterHtml: 'To feed a rapidly growing global population, governments must <strong>scale up</strong>...',
+                starterPlain: 'To feed a rapidly growing global population, governments must scale up...'
+            },
+            {
+                id: 3,
+                topicKey: 'skyscrapers',
+                topicName: 'Crop-growing skyscrapers',
+                word: 'cutting-edge technologies',
+                translation: 'передовые (ультрасовременные) технологии',
+                question: 'How can cutting-edge technologies make modern food production more sustainable?',
+                starterHtml: 'By employing <strong>cutting-edge technologies</strong>, modern urban farmers can...',
+                starterPlain: 'By employing cutting-edge technologies, modern urban farmers can...'
+            },
+            {
+                id: 4,
+                topicKey: 'skyscrapers',
+                topicName: 'Crop-growing skyscrapers',
+                word: 'proponents',
+                translation: 'сторонники, защитники (какой-либо идеи или теории)',
+                question: 'What are the main advantages that proponents of vertical farming emphasize?',
+                starterHtml: '<strong>Proponents</strong> of vertical farming argue that growing crops in skyscrapers will...',
+                starterPlain: 'Proponents of vertical farming argue that growing crops in skyscrapers will...'
+            },
+            {
+                id: 5,
+                topicKey: 'skyscrapers',
+                topicName: 'Crop-growing skyscrapers',
+                word: 'to take something for granted',
+                translation: 'воспринимать как должное',
+                question: 'Why do people living in big cities often take food security for granted?',
+                starterHtml: 'Many people in developed countries <strong>take it for granted</strong> that...',
+                starterPlain: 'Many people in developed countries take it for granted that...'
+            },
+            {
+                id: 6,
+                topicKey: 'skyscrapers',
+                topicName: 'Crop-growing skyscrapers',
+                word: 'to take their toll',
+                translation: 'наносить урон, пагубно сказываться',
+                question: 'In what ways do extreme weather events take their toll on traditional agriculture?',
+                starterHtml: 'Severe droughts, massive floods, and hurricanes <strong>take their toll</strong> on...',
+                starterPlain: 'Severe droughts, massive floods, and hurricanes take their toll on...'
+            },
+            {
+                id: 7,
+                topicKey: 'skyscrapers',
+                topicName: 'Crop-growing skyscrapers',
+                word: 'prohibitively expensive',
+                translation: 'непомерно дорогой (мешающий покупке или внедрению)',
+                question: 'Why is artificial lighting in multi-storey vertical farms currently considered prohibitively expensive?',
+                starterHtml: 'Without access to cheap renewable energy, running multi-storey indoor farms remains <strong>prohibitively expensive</strong> because...',
+                starterPlain: 'Without access to cheap renewable energy, running multi-storey indoor farms remains prohibitively expensive because...'
+            },
+            {
+                id: 8,
+                topicKey: 'skyscrapers',
+                topicName: 'Crop-growing skyscrapers',
+                word: 'detrimental impact',
+                translation: 'пагубное (вредное) воздействие',
+                question: 'What kind of detrimental impact can high energy consumption in vertical farms have on the environment?',
+                starterHtml: 'Scientists are working hard to reduce the <strong>detrimental impact</strong> that...',
+                starterPlain: 'Scientists are working hard to reduce the detrimental impact that...'
+            },
+
+            // Текст 2: Green roofs
+            {
+                id: 9,
+                topicKey: 'greenroofs',
+                topicName: 'Green roofs',
+                word: 'mitigating the risk',
+                translation: 'смягчение / снижение риска',
+                question: 'How do green and blue roofs help cities in mitigating the risk of severe flooding?',
+                starterHtml: 'Installing vegetation on city rooftops is an effective strategy for <strong>mitigating the risk</strong> of...',
+                starterPlain: 'Installing vegetation on city rooftops is an effective strategy for mitigating the risk of...'
+            },
+            {
+                id: 10,
+                topicKey: 'greenroofs',
+                topicName: 'Green roofs',
+                word: 'forward-thinking policies',
+                translation: 'дальновидная политика (стратегия)',
+                question: 'How have forward-thinking policies in cities like London and San Francisco encouraged eco-friendly architecture?',
+                starterHtml: 'Thanks to <strong>forward-thinking policies</strong> introduced by local authorities, major cities have...',
+                starterPlain: 'Thanks to forward-thinking policies introduced by local authorities, major cities have...'
+            },
+            {
+                id: 11,
+                topicKey: 'greenroofs',
+                topicName: 'Green roofs',
+                word: 'paved the way to',
+                translation: 'проложили путь к..., создали условия для...',
+                question: 'What initiatives have paved the way to doubling the area of green roofs in London?',
+                starterHtml: 'The government’s new environmental regulations <strong>paved the way to</strong>...',
+                starterPlain: 'The government’s new environmental regulations paved the way to...'
+            },
+            {
+                id: 12,
+                topicKey: 'greenroofs',
+                topicName: 'Green roofs',
+                word: 'built environment',
+                translation: 'искусственная среда обитания (здания, дороги, городская застройка)',
+                question: 'Why is it important to integrate nature and drainage systems into the urban built environment?',
+                starterHtml: 'Adding green spaces and living walls makes the urban <strong>built environment</strong> much more...',
+                starterPlain: 'Adding green spaces and living walls makes the urban built environment much more...'
+            },
+            {
+                id: 13,
+                topicKey: 'greenroofs',
+                topicName: 'Green roofs',
+                word: 'to retro-fit',
+                translation: 'модернизировать, дооснащать (старые здания новыми технологиями)',
+                question: 'Why is it much more challenging to retro-fit older buildings with green roofs compared to constructing new ones?',
+                starterHtml: 'Architects often find it difficult <strong>to retro-fit</strong> historical buildings with rooftop gardens because...',
+                starterPlain: 'Architects often find it difficult to retro-fit historical buildings with rooftop gardens because...'
+            },
+            {
+                id: 14,
+                topicKey: 'greenroofs',
+                topicName: 'Green roofs',
+                word: 'underpinning',
+                translation: 'лежащий в основе, подкрепляющий',
+                question: 'How have improvements in the science underpinning green roofs led to new concepts like "blue" and "brown" roofs?',
+                starterHtml: 'New scientific research <strong>underpinning</strong> sustainable urban design demonstrates that...',
+                starterPlain: 'New scientific research underpinning sustainable urban design demonstrates that...'
+            },
+            {
+                id: 15,
+                topicKey: 'greenroofs',
+                topicName: 'Green roofs',
+                word: 'to be replicated',
+                translation: 'быть воспроизведенным, скопированным (успешный опыт)',
+                question: 'What needs to happen for the success of North American rooftop farms to be replicated worldwide?',
+                starterHtml: 'If the success of green roofs in North America <strong>is replicated</strong> in other parts of the world, cities will...',
+                starterPlain: 'If the success of green roofs in North America is replicated in other parts of the world, cities will...'
+            },
+
+            // Текст 3: The risks agriculture faces in developing countries
+            {
+                id: 16,
+                topicKey: 'agriculture',
+                topicName: 'Risks of agriculture',
+                word: 'price volatility',
+                translation: 'волатильность (нестабильность, резкие колебания) цен',
+                question: 'What causes price volatility in agricultural markets, and how does it affect smallholder farmers?',
+                starterHtml: 'Extreme <strong>price volatility</strong> in global food markets makes it hard for small farmers to...',
+                starterPlain: 'Extreme price volatility in global food markets makes it hard for small farmers to...'
+            },
+            {
+                id: 17,
+                topicKey: 'agriculture',
+                topicName: 'Risks of agriculture',
+                word: 'adverse environments',
+                translation: 'неблагоприятные условия (природные и экономические)',
+                question: 'What kinds of natural and human adverse environments do farmers in developing countries have to deal with?',
+                starterHtml: 'Smallholder farmers in developing regions often struggle to survive due to <strong>adverse environments</strong>, such as...',
+                starterPlain: 'Smallholder farmers in developing regions often struggle to survive due to adverse environments, such as...'
+            },
+            {
+                id: 18,
+                topicKey: 'agriculture',
+                topicName: 'Risks of agriculture',
+                word: 'prevalent',
+                translation: 'широко распространенный, преобладающий',
+                question: 'Why is it paradoxical that hunger is still prevalent among people who actually grow food?',
+                starterHtml: 'Despite advances in global food production, malnutrition remains <strong>prevalent</strong> in...',
+                starterPlain: 'Despite advances in global food production, malnutrition remains prevalent in...'
+            },
+            {
+                id: 19,
+                topicKey: 'agriculture',
+                topicName: 'Risks of agriculture',
+                word: 'underlying causes',
+                translation: 'глубинные (основные) причины',
+                question: 'According to experts, what are the underlying causes of the agricultural system’s inability to feed everyone?',
+                starterHtml: 'To solve the global food crisis, policymakers must address the <strong>underlying causes</strong> of...',
+                starterPlain: 'To solve the global food crisis, policymakers must address the underlying causes of...'
+            },
+            {
+                id: 20,
+                topicKey: 'agriculture',
+                topicName: 'Risks of agriculture',
+                word: 'state intervention',
+                translation: 'государственное вмешательство / поддержка',
+                question: 'How can state intervention, such as building roads and storage facilities, reduce risks for rural farmers?',
+                starterHtml: 'Many economists argue that targeted <strong>state intervention</strong> is essential when...',
+                starterPlain: 'Many economists argue that targeted state intervention is essential when...'
+            },
+            {
+                id: 21,
+                topicKey: 'agriculture',
+                topicName: 'Risks of agriculture',
+                word: 'alleviating uncertainties',
+                translation: 'смягчение / уменьшение неопределенности',
+                question: 'How does government procurement of food stocks help in alleviating uncertainties about market supply?',
+                starterHtml: 'Greater market transparency plays a key role in <strong>alleviating uncertainties</strong> for...',
+                starterPlain: 'Greater market transparency plays a key role in alleviating uncertainties for...'
+            },
+            {
+                id: 22,
+                topicKey: 'agriculture',
+                topicName: 'Risks of agriculture',
+                word: 'crop yields',
+                translation: 'урожайность сельскохозяйственных культур',
+                question: 'How does climate change threaten crop yields in developing regions?',
+                starterHtml: 'Climate change directly threatens global food security by reducing <strong>crop yields</strong> and...',
+                starterPlain: 'Climate change directly threatens global food security by reducing crop yields and...'
+            },
+            {
+                id: 23,
+                topicKey: 'agriculture',
+                topicName: 'Risks of agriculture',
+                word: 'bargaining power',
+                translation: 'рыночная власть, переговорная сила (способность отстаивать свои условия)',
+                question: 'How can joining agricultural co-operatives improve the bargaining power of small-scale producers?',
+                starterHtml: 'When small-scale farmers join collective action groups, they increase their <strong>bargaining power</strong>, which allows them to...',
+                starterPlain: 'When small-scale farmers join collective action groups, they increase their bargaining power, which allows them to...'
+            },
+
+            // Текст 4: Urban farming
+            {
+                id: 24,
+                topicKey: 'urban',
+                topicName: 'Urban farming',
+                word: 'to bear fruit',
+                translation: 'приносить плоды (давать успешные результаты)',
+                question: 'How did Pascal Hardy’s early experiments with aeroponic towers on his Paris apartment roof finally bear fruit?',
+                starterHtml: 'After five years of testing soil-free agriculture, Hardy’s innovative project finally <strong>bore fruit</strong> when...',
+                starterPlain: 'After five years of testing soil-free agriculture, Hardy’s innovative project finally bore fruit when...'
+            },
+            {
+                id: 25,
+                topicKey: 'urban',
+                topicName: 'Urban farming',
+                word: 'practical constraints',
+                translation: 'практические ограничения',
+                question: 'What practical constraints prevent urban rooftop farms from feeding an entire city?',
+                starterHtml: 'Although inner-city agriculture is growing fast, there are significant <strong>practical constraints</strong> on...',
+                starterPlain: 'Although inner-city agriculture is growing fast, there are significant practical constraints on...'
+            },
+            {
+                id: 26,
+                topicKey: 'urban',
+                topicName: 'Urban farming',
+                word: 'flourishing',
+                translation: 'процветающий, бурно развивающийся',
+                question: 'Why has urban agriculture become a flourishing industry in major cities around the globe?',
+                starterHtml: 'Urban agriculture is a <strong>flourishing</strong> sector that attracts global interest because...',
+                starterPlain: 'Urban agriculture is a flourishing sector that attracts global interest because...'
+            },
+            {
+                id: 27,
+                topicKey: 'urban',
+                topicName: 'Urban farming',
+                word: 'withstand',
+                translation: 'выдерживать, противостоять (нагрузкам, перевозке, погоде)',
+                question: 'Why are conventional supermarket vegetables often bred to withstand long journeys rather than for flavour?',
+                starterHtml: 'Because locally grown produce does not need to <strong>withstand</strong> thousands of kilometres of transport, farmers can...',
+                starterPlain: 'Because locally grown produce does not need to withstand thousands of kilometres of transport, farmers can...'
+            },
+            {
+                id: 28,
+                topicKey: 'urban',
+                topicName: 'Urban farming',
+                word: 'closed circuit',
+                translation: 'замкнутый цикл (контур)',
+                question: 'How does pumping nutrient-rich water around a closed circuit save resources in aeroponic farming?',
+                starterHtml: 'Because water is recycled through a <strong>closed circuit</strong> of pipes and towers, urban farms can...',
+                starterPlain: 'Because water is recycled through a closed circuit of pipes and towers, urban farms can...'
+            },
+            {
+                id: 29,
+                topicKey: 'urban',
+                topicName: 'Urban farming',
+                word: 'exhausted (soil)',
+                translation: 'истощенная (почва)',
+                question: 'Why does aeroponic farming avoid the problem of exhausted soil common in intensive agriculture?',
+                starterHtml: 'Unlike traditional intensive farming, soil-free aeroponic systems never leave the land <strong>exhausted</strong> because...',
+                starterPlain: 'Unlike traditional intensive farming, soil-free aeroponic systems never leave the land exhausted because...'
+            },
+            {
+                id: 30,
+                topicKey: 'urban',
+                topicName: 'Urban farming',
+                word: 'disused',
+                translation: 'заброшенный, вышедший из употребления',
+                question: 'How are disused urban spaces like shipping containers and underground carparks being repurposed for food production?',
+                starterHtml: 'In crowded metropolises, transforming <strong>disused</strong> buildings and carparks into farms helps to...',
+                starterPlain: 'In crowded metropolises, transforming disused buildings and carparks into farms helps to...'
+            }
+        ];
+
+        // Цветовая палитра для секторов колеса (современные, приятные глазу оттенки)
+        const WHEEL_COLORS = [
+            '#4f46e5', // Indigo 600
+            '#0284c7', // Sky 600
+            '#0d9488', // Teal 600
+            '#059669', // Emerald 600
+            '#2563eb', // Blue 600
+            '#7c3aed', // Violet 600
+            '#d97706', // Amber 600
+            '#e11d48'  // Rose 600
+        ];
+
+        // Состояние приложения
+        let state = {
+            selectedTopic: 'all',
+            hideMastered: false,
+            masteredIds: new Set(),
+            currentItem: null,
+            isSpinning: false,
+            currentRotation: 0, // в радианах
+            savedResponses: []
+        };
+
+        // Загрузка прогресса из localStorage (если есть)
+        try {
+            const savedMastered = localStorage.getItem('ielts_mastered_ids');
+            if (savedMastered) {
+                state.masteredIds = new Set(JSON.parse(savedMastered));
+            }
+            const savedLogs = localStorage.getItem('ielts_saved_responses');
+            if (savedLogs) {
+                state.savedResponses = JSON.parse(savedLogs);
+            }
+        } catch (e) {
+            console.warn('LocalStorage недоступен:', e);
+        }
+
+        // DOM элементы
+        const canvas = document.getElementById('wheel-canvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spin-btn');
+        const mainSpinBtn = document.getElementById('main-spin-btn');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const hideMasteredToggle = document.getElementById('hide-mastered-toggle');
+        const availableCountEl = document.getElementById('available-count');
+        const masteredCountEl = document.getElementById('mastered-count');
+
+        const emptyStateCard = document.getElementById('empty-state-card');
+        const taskCard = document.getElementById('task-card');
+        const cardTopicBadge = document.getElementById('card-topic-badge');
+        const cardMasteredCheckbox = document.getElementById('card-mastered-checkbox');
+        const cardWord = document.getElementById('card-word');
+        const cardTranslation = document.getElementById('card-translation');
+        const cardQuestion = document.getElementById('card-question');
+        const cardStarter = document.getElementById('card-starter');
+        const inputQuestionAnswer = document.getElementById('input-question-answer');
+        const inputSentenceCompletion = document.getElementById('input-sentence-completion');
+        const answerForm = document.getElementById('answer-form');
+        const skipBtn = document.getElementById('skip-btn');
+
+        const responsesList = document.getElementById('responses-list');
+        const emptyLogMessage = document.getElementById('empty-log-message');
+        const logCountBadge = document.getElementById('log-count-badge');
+        const copyAllBtn = document.getElementById('copy-all-btn');
+        const clearLogBtn = document.getElementById('clear-log-btn');
+
+        // Получить отфильтрованный список слов для колеса
+        function getFilteredItems() {
+            return VOCABULARY_DATA.filter(item => {
+                const topicMatch = state.selectedTopic === 'all' || item.topicKey === state.selectedTopic;
+                const masteredMatch = !state.hideMastered || !state.masteredIds.has(item.id);
+                return topicMatch && masteredMatch;
+            });
+        }
+
+        // Показать всплывающее уведомление
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.textContent = message;
+            toastIcon.textContent = isError ? '!' : '✓';
+            toastIcon.className = isError ? 'text-rose-400 text-lg font-bold' : 'text-emerald-400 text-lg font-bold';
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Адаптивная настройка размера Canvas с учетом Retina (DPR)
+        function resizeCanvas() {
+            const container = document.getElementById('wheel-container');
+            const size = container.clientWidth;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            drawWheel();
+        }
+
+        // Отрисовка колеса фортуны
+        function drawWheel() {
+            const items = getFilteredItems();
+            const container = document.getElementById('wheel-container');
+            const size = container.clientWidth;
+            const center = size / 2;
+            const radius = center - 6;
+
+            ctx.clearRect(0, 0, size, size);
+
+            // Обновляем счетчики
+            availableCountEl.textContent = items.length;
+            masteredCountEl.textContent = state.masteredIds.size;
+
+            if (items.length === 0) {
+                // Если все слова в теме изучены и скрыты
+                ctx.beginPath();
+                ctx.arc(center, center, radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#e2e8f0';
+                ctx.fill();
+                ctx.fillStyle = '#475569';
+                ctx.font = 'bold 14px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Все слова в этой теме изучены!', center, center - 48);
+                return;
+            }
+
+            const arcSize = (Math.PI * 2) / items.length;
+
+            items.forEach((item, index) => {
+                const startAngle = state.currentRotation + index * arcSize;
+                const endAngle = startAngle + arcSize;
+
+                // Сектор
+                ctx.beginPath();
+                ctx.moveTo(center, center);
+                ctx.arc(center, center, radius, startAngle, endAngle);
+                ctx.closePath();
+
+                // Цвет сектора (если изучено — делаем чуть приглушеннее)
+                const isMastered = state.masteredIds.has(item.id);
+                ctx.fillStyle = isMastered ? '#94a3b8' : WHEEL_COLORS[index % WHEEL_COLORS.length];
+                ctx.fill();
+
+                // Белая разделительная линия
+                ctx.lineWidth = items.length > 15 ? 1.5 : 2.5;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                // Текст внутри сектора
+                ctx.save();
+                ctx.translate(center, center);
+                ctx.rotate(startAngle + arcSize / 2);
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#ffffff';
+
+                // Динамический размер шрифта в зависимости от количества секторов
+                const fontSize = items.length > 20 ? 10 : (items.length > 10 ? 11.5 : 13);
+                ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+
+                // Обрезаем слишком длинные фразы для красивого отображения на колесе
+                let label = item.word;
+                if (label.length > 19 && items.length > 12) {
+                    label = label.substring(0, 17) + '…';
+                }
+
+                ctx.fillText(label, radius - 14, 0);
+                ctx.restore();
+            });
+
+            // Внешняя декоративная обводка
+            ctx.beginPath();
+            ctx.arc(center, center, radius, 0, Math.PI * 2);
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+        }
+
+        // Запуск вращения карусели
+        function spinWheel() {
+            if (state.isSpinning) return;
+            const items = getFilteredItems();
+            if (items.length === 0) {
+                showToast('Нет доступных слов. Отключите фильтр «Скрывать изученные» или смените тему.', true);
+                return;
+            }
+
+            state.isSpinning = true;
+            mainSpinBtn.disabled = true;
+            mainSpinBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            // Выбираем случайный целевой индекс и рассчитываем угол остановки
+            // Указатель находится сверху (-Math.PI / 2 или 3 * Math.PI / 2)
+            const extraSpins = (5 + Math.floor(Math.random() * 4)) * Math.PI * 2;
+            const randomOffset = Math.random() * Math.PI * 2;
+            const startRotation = state.currentRotation;
+            const targetRotation = startRotation + extraSpins + randomOffset;
+
+            const duration = 3600; // 3.6 секунды
+            const startTime = performance.now();
+
+            function animate(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                // Плавное замедление (easeOutQuart)
+                const easeOut = 1 - Math.pow(1 - progress, 4);
+                state.currentRotation = startRotation + (targetRotation - startRotation) * easeOut;
+
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    state.isSpinning = false;
+                    mainSpinBtn.disabled = false;
+                    mainSpinBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+
+                    // Определяем, какой сектор оказался под верхним указателем (-Math.PI / 2)
+                    const normalizedRotation = ((state.currentRotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                    const pointerAngle = (Math.PI * 1.5 - normalizedRotation + Math.PI * 2) % (Math.PI * 2);
+                    const arcSize = (Math.PI * 2) / items.length;
+                    const winningIndex = Math.floor(pointerAngle / arcSize) % items.length;
+
+                    const selectedItem = items[winningIndex];
+                    openTaskCard(selectedItem);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Открытие карточки задания с выпавшим словом
+        function openTaskCard(item) {
+            state.currentItem = item;
+
+            emptyStateCard.classList.add('hidden');
+            taskCard.classList.remove('hidden');
+
+            // Перезапускаем анимацию появления
+            taskCard.classList.remove('animate-pop-in');
+            void taskCard.offsetWidth;
+            taskCard.classList.add('animate-pop-in');
+
+            cardTopicBadge.textContent = item.topicName;
+            cardWord.textContent = item.word;
+            cardTranslation.textContent = item.translation;
+            cardQuestion.textContent = item.question;
+            cardStarter.innerHTML = item.starterHtml;
+
+            cardMasteredCheckbox.checked = state.masteredIds.has(item.id);
+            inputQuestionAnswer.value = '';
+            inputSentenceCompletion.value = '';
+
+            // На мобильных устройствах плавно прокручиваем к карточке задания
+            if (window.innerWidth < 1024) {
+                taskCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Сохранение прогресса в localStorage
+        function persistData() {
+            try {
+                localStorage.setItem('ielts_mastered_ids', JSON.stringify([...state.masteredIds]));
+                localStorage.setItem('ielts_saved_responses', JSON.stringify(state.savedResponses));
+            } catch (e) {
+                console.warn('Не удалось сохранить в localStorage', e);
+            }
+        }
+
+        // Отрисовка журнала ответов ученика
+        function renderResponsesLog() {
+            logCountBadge.textContent = state.savedResponses.length;
+
+            if (state.savedResponses.length === 0) {
+                emptyLogMessage.classList.remove('hidden');
+                clearLogBtn.classList.add('hidden');
+                responsesList.innerHTML = '';
+                responsesList.appendChild(emptyLogMessage);
+                return;
+            }
+
+            emptyLogMessage.classList.add('hidden');
+            clearLogBtn.classList.remove('hidden');
+            responsesList.innerHTML = '';
+
+            // Показываем новые ответы сверху
+            [...state.savedResponses].reverse().forEach((entry, revIdx) => {
+                const actualIndex = state.savedResponses.length - 1 - revIdx;
+                const card = document.createElement('div');
+                card.className = 'p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-indigo-200 transition-all';
+
+                card.innerHTML = `
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs font-bold">${escapeHtml(entry.word)}</span>
+                            <span class="text-xs font-medium text-slate-400">${escapeHtml(entry.topicName)}</span>
+                        </div>
+                        <button data-delete-idx="${actualIndex}" class="delete-entry-btn text-xs text-slate-400 hover:text-rose-600 font-medium transition-colors cursor-pointer">
+                            Удалить
+                        </button>
+                    </div>
+                    <div class="space-y-2.5 text-sm">
+                        ${entry.questionAnswer ? `
+                            <div class="bg-white p-3 rounded-xl border border-slate-100">
+                                <div class="text-xs text-slate-400 mb-1"><strong>Q:</strong> ${escapeHtml(entry.question)}</div>
+                                <div class="text-slate-800 font-medium">${escapeHtml(entry.questionAnswer)}</div>
+                            </div>
+                        ` : ''}
+                        ${entry.sentenceCompletion ? `
+                            <div class="bg-white p-3 rounded-xl border border-slate-100">
+                                <div class="text-xs text-slate-400 mb-1"><strong>Завершенное предложение:</strong></div>
+                                <div class="text-slate-800 font-medium">${escapeHtml(entry.starterPlain.replace(/\.\.\.$/, ''))} <span class="text-indigo-700 font-semibold">${escapeHtml(entry.sentenceCompletion)}</span></div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                responsesList.appendChild(card);
+            });
+
+            // Обработчики удаления отдельных записей
+            document.querySelectorAll('.delete-entry-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(e.target.getAttribute('data-delete-idx'), 10);
+                    state.savedResponses.splice(idx, 1);
+                    persistData();
+                    renderResponsesLog();
+                    showToast('Запись удалена');
+                });
+            });
+        }
+
+        // Экранирование HTML для безопасности
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // События фильтров тем
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (state.isSpinning) return;
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+                    b.classList.add('bg-slate-100', 'text-slate-700');
+                });
+                btn.classList.remove('bg-slate-100', 'text-slate-700');
+                btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+
+                state.selectedTopic = btn.getAttribute('data-topic');
+                drawWheel();
+            });
+        });
+
+        // Переключатель «Скрывать изученные»
+        hideMasteredToggle.addEventListener('change', (e) => {
+            state.hideMastered = e.target.checked;
+            drawWheel();
+        });
+
+        // Чекбокс «Отметить как изученное» на карточке
+        cardMasteredCheckbox.addEventListener('change', (e) => {
+            if (!state.currentItem) return;
+            if (e.target.checked) {
+                state.masteredIds.add(state.currentItem.id);
+                showToast(`«${state.currentItem.word}» отмечено как изученное`);
+            } else {
+                state.masteredIds.delete(state.currentItem.id);
+            }
+            persistData();
+            drawWheel();
+        });
+
+        // Отправка формы (Сохранить ответ)
+        answerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!state.currentItem) return;
+
+            const qAns = inputQuestionAnswer.value.trim();
+            const sComp = inputSentenceCompletion.value.trim();
+
+            if (!qAns && !sComp) {
+                showToast('Пожалуйста, напишите ответ на вопрос или закончите предложение.', true);
+                return;
+            }
+
+            state.savedResponses.push({
+                id: Date.now(),
+                word: state.currentItem.word,
+                topicName: state.currentItem.topicName,
+                question: state.currentItem.question,
+                questionAnswer: qAns,
+                starterPlain: state.currentItem.starterPlain,
+                sentenceCompletion: sComp
+            });
+
+            persistData();
+            renderResponsesLog();
+            showToast('Ответ сохранён в журнал!');
+
+            // Очищаем поля после сохранения
+            inputQuestionAnswer.value = '';
+            inputSentenceCompletion.value = '';
+        });
+
+        // Кнопки вращения колеса
+        spinBtn.addEventListener('click', spinWheel);
+        mainSpinBtn.addEventListener('click', spinWheel);
+        skipBtn.addEventListener('click', spinWheel);
+
+        // Копирование всех ответов в буфер обмена (через document.execCommand для совместимости с iframe)
+        copyAllBtn.addEventListener('click', () => {
+            if (state.savedResponses.length === 0) {
+                showToast('Журнал пуст — нечего копировать.', true);
+                return;
+            }
+
+            let formattedText = '📚 ОТВЕТЫ УЧЕНИКА ПО ЛЕКСИКЕ IELTS\n====================================\n\n';
+            state.savedResponses.forEach((item, index) => {
+                formattedText += `${index + 1}. Слово: ${item.word.toUpperCase()} (${item.topicName})\n`;
+                if (item.questionAnswer) {
+                    formattedText += `   • Вопрос: ${item.question}\n`;
+                    formattedText += `   • Ответ: ${item.questionAnswer}\n`;
+                }
+                if (item.sentenceCompletion) {
+                    const cleanStarter = item.starterPlain.replace(/\.\.\.$/, '');
+                    formattedText += `   • Предложение: ${cleanStarter} ${item.sentenceCompletion}\n`;
+                }
+                formattedText += '\n';
+            });
+
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = formattedText;
+            tempTextarea.style.position = 'fixed';
+            tempTextarea.style.left = '-9999px';
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+
+            try {
+                document.execCommand('copy');
+                showToast('Все ответы скопированы! Можно отправлять учителю.');
+            } catch (err) {
+                showToast('Не удалось скопировать текст.', true);
+            }
+            document.body.removeChild(tempTextarea);
+        });
+
+        // Очистка журнала
+        clearLogBtn.addEventListener('click', () => {
+            state.savedResponses = [];
+            persistData();
+            renderResponsesLog();
+            showToast('Журнал ответов очищен');
+        });
+
+        // Инициализация при загрузке и изменении размера окна
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('DOMContentLoaded', () => {
+            resizeCanvas();
+            renderResponsesLog();
+        });
+    </script>
+</body>
+</html>
